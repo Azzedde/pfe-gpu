@@ -16,9 +16,9 @@ class LoginEventHandler(FileSystemEventHandler):
         self.session_length = session_length
 
     def on_modified(self, event):
-        if event.src_path == '/var/run/utmp':
-            with open('/var/run/utmp', 'rb') as f:
-                if self.username.encode() in f.read():
+        if event.src_path == '/var/log/auth.log':
+            with open('/var/log/auth.log', 'r') as f:
+                if f"session opened for user {self.username}" in f.read():
                     print(f'User {self.username} logged in, they will be deleted in {self.session_length} ...')
                     time.sleep(self.session_length)
                     delete_user(self.username)
@@ -47,13 +47,13 @@ def manage_user(username, password, session_length):
 
     if free_gb < 10:  # If less than 10 GB is free
         print("Insufficient disk space. Need at least 10GB free.")
-        
         return
+
     create_user(username, password)
 
     event_handler = LoginEventHandler(username, password, session_length)
     observer = Observer()
-    observer.schedule(event_handler, '/var/run/', recursive=False)
+    observer.schedule(event_handler, '/var/log/', recursive=False)
     observer.start()
 
     try:
@@ -62,6 +62,9 @@ def manage_user(username, password, session_length):
     except KeyboardInterrupt:
         observer.stop()
     observer.join()
+
+
+
 
 def main(): # just for testing
     username = 'testuser'
