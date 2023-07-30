@@ -19,10 +19,12 @@ class LoginEventHandler(FileSystemEventHandler):
         if event.src_path == '/var/log/auth.log':
             with open('/var/log/auth.log', 'r') as f:
                 if f"session opened for user {self.username}" in f.read():
-                    print(f'User {self.username} logged in, they will be deleted in {self.session_length} ...')
+                    print(f'User {self.username} logged in, their session will be stopped in {self.session_length} seconds')
                     time.sleep(self.session_length)
-                    delete_user(self.username)
-                    print(f'User {self.username} deleted.')
+                    close_session_user(self.username)
+                    print(f'User {self.username}\'s session stopped successfully.')
+                    subprocess.run(['passwd', '-l', f'{self.username}'], check=True)
+                    print(f'User {self.username}\'s password has been locked.')
                     self.stop()
 
     def stop(self):
@@ -32,12 +34,14 @@ def create_user(username, password):
     subprocess.run(['useradd', '-m', username], check=True)
     subprocess.run(['chpasswd'], input=f'{username}:{password}', universal_newlines=True, check=True)
 
-def delete_user(username):
+def close_session_user(username):
     try:
-        subprocess.run(['pkill', '-u', username], check=True)
+        subprocess.run(['pkill', '-u', username], check=False)
     except subprocess.CalledProcessError:
-        print(f"No running processes for {username}, continuing with deletion.")
-    subprocess.run(['userdel', '-r', username], check=True)
+        print(f"No running processes found for {username}, user session already closed.")
+    else:
+        print(f"All processes for {username} have been terminated, user session closed.")
+    
 
 def manage_user(username, password, session_length):
     total, used, free = shutil.disk_usage("/")
