@@ -11,6 +11,11 @@ import os
 import threading
 
 def index(request):
+
+    return render(request, 'app/index.html')
+
+
+def session_request(request):
     if request.method == 'POST':
         nom = request.POST['nom']
         prenom = request.POST['prenom']
@@ -50,7 +55,24 @@ def index(request):
         # Redirect to a success page after saving the data
         return redirect('success_session_request', id=session_request.id)
 
-    return render(request, 'app/index.html')
+    return render(request, 'app/session_request.html')
+
+def session_redemand(request):
+    if request.method == 'POST':
+        email = request.POST['email']
+        session_request = SessionRequest.objects.get(email=email)
+        print('session redemanded !')
+        # Generate a random secure password
+        password = ''.join(random.choices(string.ascii_letters + string.digits, k=10))
+        
+
+        # Store the password in the session request for later reference
+        session_request.password = password
+        session_request.save()
+        session_length = 10
+        threading.Thread(target=user_management.redemand_session, args=(session_request.email, password, session_length)).start()
+        return redirect('success_session_request', id=session_request.id)
+    return render(request, 'app/session_redemand.html')
 
 def success_session_request(request,id):
     session_request = SessionRequest.objects.get(pk=id)

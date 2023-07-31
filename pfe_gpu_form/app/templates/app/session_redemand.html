@@ -32,17 +32,31 @@
         <div class="wrapper wrapper--w790">
             <div class="card card-5">
                 <div class="card-heading">
-                    <h2 class="title">Demande Ticket pour Session GPU</h2>
+                    <h2 class="title">Redemande de Ticket pour Session GPU</h2>
                 </div>
                 <div class="card-body">
+                    <label class="label--desc">Veuillez saisir votre email pour recevoir un nouveau ticket</label>
+                    <form method="POST" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        
+                        <div class="form-row">
+                            <div class="email">Email</div>
+                            <div class="value">
+                                <div class="input-group">
+                                    <input class="input--style-5" type="text" name="email">
+                                </div>
+                            </div>
+                        </div>
+  
 
-                    <h2>Avez-vous déjà demander une session auparavant ?</h2>
-                    <br>
-                    <div class="btn-group">
-                        <a href="{% url 'session_request' %}" type="button" class="btn btn--radius-2 btn--red" >Non</a>
-                        <a href="{% url 'session_redemand' %}" type="button" class="btn btn--radius-2 btn--red" >Oui</a>
-                    </div>
-                
+
+
+
+                        <div>
+                            <button class="btn btn--radius-2 btn--red" type="submit">Redemander une Session</button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
