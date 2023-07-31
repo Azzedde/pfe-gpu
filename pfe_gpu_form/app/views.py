@@ -10,6 +10,9 @@ import os
 
 import threading
 
+from django.conf import settings
+from django.core.mail import send_mail
+
 def index(request):
 
     return render(request, 'app/index.html')
