@@ -70,4 +70,23 @@ def manage_user(username, password, session_length):
         observer.stop()
     observer.join()
 
+def redemand_session(username, password, session_length):
+    subprocess.run(['passwd', '-u', f'{username}'], check=True)
+    print(f'User {username}\'s password has been unlocked.')
+    event_handler = LoginEventHandler(username, password, session_length)
+    observer = Observer()
+    observer.schedule(event_handler, '/var/log/', recursive=False)
+    observer.start()
+
+    try:
+        while observer.is_alive():
+            observer.join(1)
+    except KeyboardInterrupt:
+        observer.stop()
+    observer.join()
+    print(f'User {username}\'s session created successfully.')
+
+
+
+
 
