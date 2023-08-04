@@ -25,6 +25,75 @@
 
     <!-- Main CSS-->
     <link href="{% static 'css/main.css' %}" rel="stylesheet" media="all">
+    <script type="text/javascript" src="{% static 'js/gcharts.js' %}"></script>
+    <style>
+        .card-body {
+    background-color: #f9f9f9;
+    padding: 20px;
+    border-radius: 10px;
+}
+
+h2 {
+    color: #333;
+    font-size: 24px;
+    margin-bottom: 10px;
+}
+
+.sessions {
+    display: flex;
+    justify-content: space-between;
+}
+
+.session {
+    display: flex;
+    align-items: center;
+    background-color: #f0f0f0;
+    padding: 10px;
+    border-radius: 10px;
+    margin-bottom: 10px;
+}
+
+.session-icon {
+    width: 20px;
+    height: 20px;
+    background-color: #999;
+    border-radius: 50%;
+    margin-right: 10px;
+}
+
+.session-time {
+    font-size: 16px;
+}
+
+.session-time span {
+    font-weight: bold;
+}
+
+.btn-group {
+    display: flex;
+    justify-content: space-between;
+}
+
+.btn {
+    text-decoration: none;
+    padding: 10px 20px;
+    border-radius: 10px;
+    font-size: 16px;
+    text-align: center;
+    margin-top: 10px;
+}
+
+.btn--radius-2.btn--blue {
+    background-color: #3498db;
+    color: white;
+}
+
+.btn--radius-2.btn--green {
+    background-color: #2ecc71;
+    color: white;
+}
+
+    </style>
 </head>
 
 <body>
@@ -35,17 +104,52 @@
                     <h2 class="title">Demande Ticket pour Session GPU</h2>
                 </div>
                 <div class="card-body">
-
-                    <h2>Avez-vous déjà demander une session auparavant ?</h2>
+                    <h1 class="text-center">Nos Services</h1>
                     <br>
-                    <div class="btn-group">
-                        <a href="{% url 'session_request' %}" type="button" class="btn btn--radius-2 btn--red" >Non</a>
-                        <a href="{% url 'session_redemand' %}" type="button" class="btn btn--radius-2 btn--red" >Oui</a>
+                    <h2 class="font-poppins">Nous proposons deux sessions de GPU par jour :</h2>
+                    <div class="sessions">
+                        <div class="session">
+                            <div class="session-icon morning"></div>
+                            <div class="session-time">Session matinale : <span>7:00 à 14:00</span></div>
+                        </div>
+                        <div class="session">
+                            <div class="session-icon afternoon"></div>
+                            <div class="session-time">Session de l'après-midi : <span>14:30 à 23:59</span></div>
+                        </div>
                     </div>
+                    <div id="timeline"></div>
+                    
+                    <h2>Avez-vous déjà demander une session auparavant ?</h2>
+                    <div class="btn-group">
+                        <a href="{% url 'session_request' %}" type="button" class="btn btn--radius-2 btn--blue">Non</a>
+                        <a href="{% url 'session_redemand' %}" type="button" class="btn btn--radius-2 btn--green">Oui</a>
+                    </div>
+                </div>
                 
-            </div>
         </div>
     </div>
+
+    <script type="text/javascript">
+        google.charts.load('current', {'packages':['timeline']});
+        google.charts.setOnLoadCallback(drawChart);
+
+        function drawChart() {
+            var container = document.getElementById('timeline');
+            var chart = new google.visualization.Timeline(container);
+            var dataTable = new google.visualization.DataTable();
+
+            dataTable.addColumn({ type: 'string', id: 'Session' });
+            dataTable.addColumn({ type: 'string', id: 'Type' });
+            dataTable.addColumn({ type: 'date', id: 'Start' });
+            dataTable.addColumn({ type: 'date', id: 'End' });
+            dataTable.addRows([
+                ['Session 1', '7:00 - 14:00', new Date(0,0,0,7,0,0), new Date(0,0,0,14,0,0)],
+                ['Session 2', '14:30 - 23:59', new Date(0,0,0,14,30,0), new Date(0,0,0,23,59,0)]
+            ]);
+
+            chart.draw(dataTable);
+        }
+    </script>
 
     <!-- Jquery JS-->
     <script src="{% static 'vendor/jquery/jquery.min.js' %}"></script>

@@ -2,8 +2,8 @@ from django.shortcuts import render, HttpResponse
 
 
 from django.shortcuts import render, redirect
-from .models import SessionRequest
-import user_management 
+from .models import SessionRequest, Etudiant
+from .user_management import *
 import random
 import string
 import os
@@ -29,7 +29,7 @@ def session_request(request):
         encadrant = request.POST['encadrant']
         date_fin_pfe = request.POST['date_fin']
 
-        session_request = SessionRequest(
+        etudiant = Etudiant(
             nom=nom,
             prenom=prenom,
             specialite=specialite,
@@ -39,24 +39,33 @@ def session_request(request):
             encadrant=encadrant,
             date_fin_pfe=date_fin_pfe,
         )
-        session_request.save()
+        etudiant.save()
+        print('etudiant crée !')
+
         subject = "Demande de session en cours de traitement"
         body = f"Bonjour {nom} {prenom},\n\nNous avons bien reçu votre demande de session GPU. Votre demande est actuellement en cours de traitement. Nous vous informerons dès que votre session sera prête.\n\nCordialement,\nService Réseaux ESI"
-        user_management.send_email(email, subject, body)
-        print('session created !')
-        # Generate a random secure password
+        send_email(email, subject, body)
+        session_choice = request.POST['session_choice']
+                # Generate a random secure password
         password = ''.join(random.choices(string.ascii_letters + string.digits, k=10))
-        
-
-        # Store the password in the session request for later reference
-        session_request.password = password
+        date_debut, date_fin = get_schedule(session_choice)
+        session_request = SessionRequest(
+            etudiant=etudiant,
+            type='Nouvelle',
+            password=password,
+            session_choice=session_choice,
+            date_debut=date_debut,
+            date_fin=date_fin,
+        )
         session_request.save()
-        session_length = 10  # 10 seconds for testing
+        print('session created !')
+
 
         # Start a new thread to delete the user after the session expires
-        thread = threading.Thread(target=user_management.manage_user, args=(session_request.email, password, session_length)).start()
+        thread = threading.Thread(target=manage_user, args=(etudiant.email, password, session_request.session_choice )).start()
         
-        print('session started !')
+        session_request.save()
+        print('session processed !')
 
         # Redirect to a success page after saving the data
         return redirect('success_session_request', id=session_request.id)
@@ -66,23 +75,33 @@ def session_request(request):
 def session_redemand(request):
     if request.method == 'POST':
         email = request.POST['email']
-        session_request = SessionRequest.objects.get(email=email)
-        print('session redemanded !')
-        # Generate a random secure password
-        password = ''.join(random.choices(string.ascii_letters + string.digits, k=10))
-        
-
-        # Store the password in the session request for later reference
-        session_request.password = password
+        session_choice = request.POST['session_choice']
+        etudiant = Etudiant.objects.get(email=email)
+        date_debut, date_fin = get_schedule(session_choice)
+        session_request = SessionRequest.create(etudiant,
+                                                session_choice=session_choice,
+                                                type='Redemande',
+                                                password=etudiant.password,
+                                                date_debut=date_debut,
+                                                date_fin=date_fin,
+                                                )
         session_request.save()
-        session_length = 10
-        threading.Thread(target=user_management.redemand_session, args=(session_request.email, password, session_length)).start()
+        print('session created !')
+
+        # Start a new thread to delete the user after the session expires
+
+        thread = threading.Thread(target=redemand_session, args=(etudiant.email, etudiant.password, session_request.session_choice )).start()
+        print('session processed  !')
+        # Redirect to a success page after saving the data
         return redirect('success_session_request', id=session_request.id)
+    
+        
     return render(request, 'app/session_redemand.html')
 
 def success_session_request(request,id):
     session_request = SessionRequest.objects.get(pk=id)
-    return render(request, 'app/success.html', {'session_request': session_request})
+    etudiant = session_request.etudiant
+    return render(request, 'app/success.html', {'session_request': session_request,'etudiant':etudiant})
 
 
 

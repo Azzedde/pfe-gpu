@@ -35,15 +35,32 @@
                     <h2 class="title">Redemande de Ticket pour Session GPU</h2>
                 </div>
                 <div class="card-body">
-                    <label class="label--desc">Veuillez saisir votre email pour recevoir un nouveau ticket</label>
+                    <h2 class="title-1">Veuillez saisir vos informations pour recevoir un nouveau ticket</h2>
                     <form method="POST" enctype="multipart/form-data">
                         {% csrf_token %}
                         
                         <div class="form-row">
-                            <div class="email">Email</div>
+                            <div class="name">Email</div>
                             <div class="value">
                                 <div class="input-group">
                                     <input class="input--style-5" type="text" name="email">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="name">Type de Session voulue</div>
+                            <div class="value">
+                                <div class="input-group">
+                                    <div class="rs-select2 js-select-simple select--no-search">
+                                        <select name="session_choice" required>
+                                            <option disabled="disabled" selected="selected">Choisir le type de Session</option>
+                                            <option value="Matinale">Session 1 (7:00 - 14:00)</option>
+                                            <option value="Après-midi">Session 2 (14:30 - 23:59)</option>
+
+                                        </select>
+                                        <div class="select-dropdown"></div>
+                                    </div>
                                 </div>
                             </div>
                         </div>

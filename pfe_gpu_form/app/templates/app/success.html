@@ -44,13 +44,13 @@
                                 <div class="row row-space">
                                     <div class="col-2">
                                         <div class="input-group-desc">
-                                            <input class="input--style-5" type="text" name="nom" value="{{session_request.nom}}" readonly>
+                                            <input class="input--style-5" type="text" name="nom" value="{{etudiant.nom}}" readonly>
                                             <label class="label--desc">Nom</label>
                                         </div>
                                     </div>
                                     <div class="col-2">
                                         <div class="input-group-desc">
-                                            <input class="input--style-5" type="text" name="prenom" value="{{session_request.prenom}}" readonly>
+                                            <input class="input--style-5" type="text" name="prenom" value="{{etudiant.prenom}}" readonly>
                                             <label class="label--desc">Prénom</label>
                                         </div>
                                     </div>
@@ -63,7 +63,7 @@
                             <div class="value">
                                 <div class="input-group">
                                     <div class="rs-select2 js-select-simple select--no-search">
-                                        <input name="specialité" value="{{session_request.specialite}}" readonly>
+                                        <input name="specialité" value="{{etudiant.specialite}}" readonly>
 
                                         
                                     
@@ -76,7 +76,7 @@
                             <div class="name">Email</div>
                             <div class="value">
                                 <div class="input-group">
-                                    <input class="input--style-5" type="email" name="email" value="{{session_request.email}}" readonly>
+                                    <input class="input--style-5" type="email" name="email" value="{{etudiant.email}}" readonly>
                                 </div>
                             </div>
                         </div>
@@ -86,7 +86,7 @@
                                 
                                     
                                         <div class="input-group-desc">
-                                            <input class="input--style-5" type="text" name="telephone" value="{{session_request.telephone}}" readonly>
+                                            <input class="input--style-5" type="text" name="telephone" value="{{etudiant.telephone}}" readonly>
                                             
                                         </div>
                                     
@@ -100,7 +100,7 @@
                                 
                                     
                                         <div class="input-group-desc">
-                                            <textarea class="input--style-5" type="text" name="intitule" readonly>{{session_request.intitule}} </textarea>
+                                            <textarea class="input--style-5" type="text" name="intitule" readonly>{{etudiant.intitule_pfe}} </textarea>
                                             
                                         </div>
                                     
@@ -114,7 +114,7 @@
                                 
                                     
                                         <div class="input-group-desc">
-                                            <input class="input--style-5" type="text" name="encadrant" value="{{session_request.encadrant}}" readonly>
+                                            <input class="input--style-5" type="text" name="encadrant" value="{{etudiant.encadrant}}" readonly>
                                             
                                         </div>
                                     
@@ -128,7 +128,7 @@
                                 
                                     
                                         <div class="input-group-desc">
-                                            <input class="input--style-5" type="date" name="date_fin" readonly value="{{session_request.date_fin}}">
+                                            <input class="input--style-5" type="date" name="date_fin" readonly value="{{etudiant.date_fin_pfe|date:'Y-m-d'}}">
                                             
                                             
                                         </div>
@@ -137,6 +137,52 @@
                             </div>
                         </div>
 
+                        <div class="form-row">
+                            <div class="name">Type de Sessions</div>
+                            <div class="value">
+                                
+                                    
+                                        <div class="input-group-desc">
+                                            <input class="input--style-5" type="text" name="encadrant" value="{{session_request.session_choice}}" readonly>
+                                            
+                                        </div>
+                                    
+                                
+                            </div>
+                        </div>
+                        <div class="form-row m-b-55">
+                            <div class="name">Session</div>
+                            <div class="value">
+                                <div class="row row-space">
+                                    <div class="col-2">
+                                        <div class="input-group-desc">
+                                            <input class="input--style-5" type="text" value="{{session_request.date_debut}}" readonly>
+                                            <label class="label--desc">Début</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-2">
+                                        <div class="input-group-desc">
+                                            <input class="input--style-5" type="text" name="prenom" value="{{session_request.date_fin}}" readonly>
+                                            <label class="label--desc">Fin</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="name">Mot de passe de la session</div>
+                            <div class="value">
+                                
+                                    
+                                        <div class="input-group-desc">
+                                            <input class="input--style-5" type="text" value="{{session_request.password}}" readonly>
+                                            
+                                        </div>
+                                    
+                                
+                            </div>
+                        </div>
 
 
                     </form>
