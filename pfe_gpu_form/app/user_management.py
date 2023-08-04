@@ -13,9 +13,8 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
-session_queue = queue.Queue()  # Create a FIFO queue
-
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
+from django.utils import timezone
 
 from .models import SessionRequest, Etudiant
 
@@ -26,13 +25,13 @@ def get_schedule(session_choice):
     afternoon_start = timedelta(hours=14, minutes=30)
     afternoon_end = timedelta(hours=23, minutes=59)
 
-    # Find the latest session for the chosen type
+    # Get the last session for the chosen type
     latest_session = SessionRequest.objects.filter(session_choice=session_choice).order_by('-date_debut').first()
 
     # Calculate the next available date_debut and date_fin based on the latest session
     date_debut = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
-    if latest_session and latest_session.date_debut.date() >= date_debut.date():
-        date_debut = latest_session.date_debut + timedelta(days=1)
+    if latest_session and latest_session.date_fin.date() >= date_debut.date():
+        date_debut = latest_session.date_fin + timedelta(days=1)
 
     if session_choice == 'Matinale':
         date_debut += morning_start
@@ -52,29 +51,39 @@ def create_user(username, password):
 def close_session_user(username):
     try:
         subprocess.run(['pkill', '-u', username], check=False)
+        # lock the user's password
+        subprocess.run(['passwd', '-l', f'{username}'], check=True)
     except subprocess.CalledProcessError:
         print(f"No running processes found for {username}, user session already closed.")
     else:
         print(f"All processes for {username} have been terminated, user session closed.")
 
-def manage_user(username, password, session_type):
-    date_debut, date_fin = get_schedule(session_type)
-    create_user(username, password)
+def start_session(etudiant_id, session_request_id):
+    session_request = SessionRequest.objects.get(id=session_request_id)
 
-    # Wait until the session start time
-    delay = (date_debut - datetime.now()).total_seconds()
+    # while the session date_debut is not reached, wait
+    while timezone.now() < session_request.date_debut:
+        time.sleep(1)
+    
+    etudiant = Etudiant.objects.get(id=etudiant_id)
+    #unlock the user's password
+    subprocess.run(['passwd', '-u', f'{etudiant.email}'], check=True)
+    print(f'User {etudiant.email}\'s password has been unlocked.')
+
+    # Calculate the delay to notify the user 30 minutes before session ends
+    notify_delay = (session_request.date_fin - timezone.now()).total_seconds() - 1800  # 1800 seconds = 30 minutes
+
+    # Start the thread to notify the user
+    threading.Thread(target=notify_user, args=(notify_delay, "Session Ending Soon", "Your session will end in 30 minutes. Please save your work.", 5000)).start()
+
+    # Wait until the session end time
+    delay = (session_request.date_fin - timezone.now()).total_seconds()
     time.sleep(delay)
-    subject = "Informations sur votre demande de session GPU"
-    body = f"Bonjour {username} !\n\nNous vous informons que votre session sera disponible à partir de {date_debut.strftime('%H:%M')} et sera active jusqu'à {date_fin.strftime('%H:%M')}.\n\n Nous vous rappelons que votre mot de passe est {password}.\n\nCordialement,\nService Réseaux ESI"
-    send_email(username, subject, body)
-    # Schedule a thread to notify user 30 minutes before session ends
-    notify_delay = (date_fin - datetime.now()).total_seconds() - 1800  # 1800 seconds = 30 minutes
-    threading.Thread(target=notify_user, args=(notify_delay,"Session Ending Soon", "Your session will end in 30 minutes. Please save your work.", 5000)).start()
-        # Wait until the session end time
-    delay = (date_fin - datetime.now()).total_seconds()
-    time.sleep(delay)
-        # Close session
-    close_session_user(username)
+
+    # Close the session
+    close_session_user(etudiant.email)
+    print(f'User {etudiant.email}\'s session ended successfully and password locked.')
+
 
 def notify_user(notify_delay, title, message, duration=5000):
     time.sleep(notify_delay)
@@ -84,33 +93,6 @@ def notify_user(notify_delay, title, message, duration=5000):
     except Exception as e:
         print(f"Failed to send notification: {str(e)}")
 
-
-def redemand_session(username, password, session_type):
-    # Unlock the user's password
-    subprocess.run(['passwd', '-u', f'{username}'], check=True)
-    print(f'User {username}\'s password has been unlocked.')
-
-    # Get the schedule for this user
-    date_debut, date_fin = get_schedule(session_type)
-
-    # Notify the user about the new session details
-    subject = "Informations sur votre demande de session GPU"
-    body = f"Bonjour {username},\n\nVotre nouvelle session GPU a été programmé pour {date_debut} et sera automatiquement arreté le {date_fin}.\n\n Nous vous rappelons que votre mot de passe est {password}.\n\nCordialement,\nService Réseaux ESI"
-    send_email(username, subject, body)
-
-    # Calculate the delay to notify the user 30 minutes before session ends
-    notify_delay = (date_fin - datetime.now()).total_seconds() - 1800  # 1800 seconds = 30 minutes
-
-    # Start the thread to notify the user
-    threading.Thread(target=notify_user, args=(notify_delay, "Session Ending Soon", "Your session will end in 30 minutes. Please save your work.", 5000)).start()
-
-    # Wait until the session end time
-    delay = (date_fin - datetime.now()).total_seconds()
-    time.sleep(delay)
-
-    # Close the session
-    close_session_user(username)
-    print(f'User {username}\'s session ended successfully.')
 
 
 def send_email(username, subject, body):
@@ -134,6 +116,10 @@ def send_email(username, subject, body):
         print(f"Email sent to {username}")
     except Exception as e:
         print(f"Failed to send email to {username}: {str(e)}")
+
+def send_email_delayed(username, subject, body, time_delay, end_time):
+    if timezone.now() == end_time - time_delay:
+        send_email(username, subject, body)
 
 
 

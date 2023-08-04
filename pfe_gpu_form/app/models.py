@@ -5,6 +5,14 @@ from django.db import models
 
 from django.db import models
 
+class SessionQueue(models.Model):
+    SESSION_CHOICES = (
+        ('Matinale', '7:00 - 14:00'),
+        ('Après-midi', '14:30 - 23:59'),
+    )
+    session_choice = models.CharField(max_length=10, choices=SESSION_CHOICES)
+    session_request = models.ForeignKey('SessionRequest', on_delete=models.CASCADE)
+
 class SessionRequest(models.Model):
     SessionRequestStatus = (
         ('Nouvelle', 'Nouvelle'),
@@ -21,6 +29,9 @@ class SessionRequest(models.Model):
     password = models.CharField(max_length=100, blank=True)
     type = models.CharField(max_length=10, choices=SessionRequestStatus, default='Nouvelle')
     session_choice = models.CharField(max_length=10, choices=SESSION_CHOICES)
+
+    def __str__(self):
+        return f"{self.etudiant} - {self.session_choice} - {self.date_demande}"
 
     
 
