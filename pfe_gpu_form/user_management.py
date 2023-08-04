@@ -9,6 +9,10 @@ import shutil
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+
 session_queue = queue.Queue()  # Create a FIFO queue
 
 class LoginEventHandler(FileSystemEventHandler):
@@ -46,6 +50,11 @@ def close_session_user(username):
         print(f"All processes for {username} have been terminated, user session closed.")
 
 def manage_user(username, password, session_length):
+    
+    subject_processing = "Demande de session en cours de traitement"
+    body_processing = f"Bonjour {username},\n\nVotre demande de session GPU est actuellement en attente dans notre file d'attente. Nous vous informerons dès que votre session sera prête.\n\nCordialement,\nService Réseaux ESI"
+    send_email(username, subject_processing, body_processing)
+
     while not session_queue.empty():  # Wait until the queue is empty
         time.sleep(1)
 
@@ -57,6 +66,9 @@ def manage_user(username, password, session_length):
 
     create_user(username, password)
     session_queue.put(username)  # Add this session to the queue
+    subject = "Nouvelle session créée"
+    body = f"Bonjour {username},\n\nNous avons reçu votre demande de création de session GPU. Nous vous offrons une session qui va durer {session_length % 3600} heures. Veuillez vous connecter à la machine GPU en utilisant:\nUsername: {username}\nPassword: {password}\n\nBon Courage !,\nService Réseaux ESI"
+    send_email(username, subject, body)
 
     event_handler = LoginEventHandler(username, password, session_length)
     observer = Observer()
@@ -85,6 +97,30 @@ def redemand_session(username, password, session_length):
         observer.stop()
     observer.join()
     print(f'User {username}\'s session created successfully.')
+
+
+def send_email(username, subject, body):
+    from_email = "reseau@esi.dz"
+    to_email = username
+    password = "D@t@ C3nt3r@1969"
+
+    msg = MIMEMultipart()
+    msg["From"] = from_email
+    msg["To"] = to_email
+    msg["Subject"] = subject
+
+    msg.attach(MIMEText(body, "plain"))
+
+    try:
+        server = smtplib.SMTP("smtp.gmail.com", 587)
+        server.starttls()
+        server.login(from_email, password)
+        server.send_message(msg)
+        server.quit()
+        print(f"Email sent to {username}")
+    except Exception as e:
+        print(f"Failed to send email to {username}: {str(e)}")
+
 
 
 

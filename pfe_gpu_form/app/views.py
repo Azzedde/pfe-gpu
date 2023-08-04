@@ -40,6 +40,9 @@ def session_request(request):
             date_fin_pfe=date_fin_pfe,
         )
         session_request.save()
+        subject = "Demande de session en cours de traitement"
+        body = f"Bonjour {nom} {prenom},\n\nNous avons bien reçu votre demande de session GPU. Votre demande est actuellement en cours de traitement. Nous vous informerons dès que votre session sera prête.\n\nCordialement,\nService Réseaux ESI"
+        user_management.send_email(email, subject, body)
         print('session created !')
         # Generate a random secure password
         password = ''.join(random.choices(string.ascii_letters + string.digits, k=10))
