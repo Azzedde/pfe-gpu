@@ -5,14 +5,6 @@ from django.db import models
 
 from django.db import models
 
-class SessionQueue(models.Model):
-    SESSION_CHOICES = (
-        ('Matinale', '7:00 - 14:00'),
-        ('Après-midi', '14:30 - 23:59'),
-    )
-    session_choice = models.CharField(max_length=10, choices=SESSION_CHOICES)
-    session_request = models.ForeignKey('SessionRequest', on_delete=models.CASCADE)
-
 class SessionRequest(models.Model):
     SessionRequestStatus = (
         ('Nouvelle', 'Nouvelle'),

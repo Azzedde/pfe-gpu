@@ -39,11 +39,14 @@ def session_request(request):
             encadrant=encadrant,
             date_fin_pfe=date_fin_pfe,
         )
-        etudiant.save()
-        #check if etudiant existed already in the database
+                #check if etudiant existed already in the database
         if Etudiant.objects.filter(email=email).exists():
             etudiant = Etudiant.objects.get(email=email)
-            return redirect('erreur', message='Vous avez déjà fait une demande auparavant ! Veuillez revenir à la page d\'accueil et cliquer sur "Redemander une session"')
+            return redirect('erreur',{'message':'Vous avez déjà fait une demande auparavant ! Veuillez revenir à la page d\'accueil et cliquer sur "Redemander une session"'})
+        etudiant.save()
+        password = ''.join(random.choices(string.ascii_letters + string.digits, k=10))
+        create_user(etudiant.email,password)
+
         print('etudiant crée !')
 
         subject = "Demande de session en cours de traitement"
@@ -51,7 +54,7 @@ def session_request(request):
         send_email(email, subject, body)
         session_choice = request.POST['session_choice']
                 # Generate a random secure password
-        password = ''.join(random.choices(string.ascii_letters + string.digits, k=10))
+        
         date_debut, date_fin = get_schedule(session_choice)
         session_request = SessionRequest(
             etudiant=etudiant,
@@ -66,11 +69,12 @@ def session_request(request):
         subject = "Informations de connexion à votre session GPU"
         body = f"Bonjour {nom} {prenom},\n\nNous vous informons que votre session GPU sera disponible à partir du {date_debut} jusqu'au {date_fin}.\n\nVoici les informations de connexion à votre session :\n\nAdresse IP de la machine: 10.0.0.24\nNom d'utilisateur : {email}\nMot de passe : {password}\n\nCordialement,\nService Réseaux ESI"
         send_email(email, subject, body)
+        print(datetime.now())
 
         
         # send an email in a thread to the student before 30 min of the date_debut of the session
         thread = threading.Thread(target=send_email_delayed, args=(email, subject, body,timedelta(minutes=30),date_debut)).start()
-        thread = threading.Thread(target=start_session, args=(etudiant.id, session_request.id ))
+        thread = threading.Thread(target=start_session, args=(etudiant.id, session_request.id )).start()
         session_request.save()
         print('session processed !')
 
@@ -85,7 +89,7 @@ def session_redemand(request):
         session_choice = request.POST['session_choice']
         etudiant = Etudiant.objects.get(email=email)
         date_debut, date_fin = get_schedule(session_choice)
-        session_request = SessionRequest.create(etudiant,
+        session_request = SessionRequest(etudiant=etudiant,
                                                 session_choice=session_choice,
                                                 type='Redemande',
                                                 password=etudiant.password,
