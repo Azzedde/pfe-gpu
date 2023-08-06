@@ -13,51 +13,46 @@ from django.conf import settings
 from django.core.mail import send_mail
 from .tasks import send_email_task, start_user_session, create_user_task
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta,time
 import pytz
 
 tz = pytz.timezone('Africa/Algiers')
 def get_schedule(session_choice):
     # Define the session timings
-    morning_start = timedelta(hours=7)
-    morning_end = timedelta(hours=14)
-    afternoon_start = timedelta(hours=14, minutes=30)
-    afternoon_end = timedelta(hours=23, minutes=59)
+    morning_start_time = time(7, 0)
+    morning_end_time = time(14, 0)
+    afternoon_start_time = time(14, 30)
+    afternoon_end_time = time(23, 59)
 
     # Current date and time
     now = datetime.now()
 
-    # Start with the assumption that the session will begin today
-    date_debut = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    # Get the last session of the chosen type with status 'En attente'
+    latest_session = SessionRequest.objects.filter(session_choice=session_choice, status='En attente').order_by('-date_debut').first()
 
-    # Check if the session_choice is 'Matinale'
-    if session_choice == 'Matinale':
-        # Check if the current time is already past the start time
-        if now.time() >= morning_start:
-            date_debut += timedelta(days=1)  # schedule for the next day
-        
-        date_debut += morning_start
-        date_fin = date_debut + morning_end - morning_start
-
-    # Otherwise, it's 'Après midi'
+    # If no such session is found, start with today's date; otherwise, use the day after the last session's start date
+    if latest_session:
+        date_debut = latest_session.date_debut.date() + timedelta(days=1)
     else:
-        # Check if the current time is already past the start time
-        if now.time() >= afternoon_start:
+        date_debut = now.date()
+
+    # If session_choice is 'Matinale' and current time is past the session start, schedule for the next day
+    if session_choice == 'Matinale':
+        if now.date() == date_debut and now.time() >= morning_start_time:
             date_debut += timedelta(days=1)  # schedule for the next day
         
-        date_debut += afternoon_start
-        date_fin = date_debut + afternoon_end - afternoon_start
-    
-    # Get any session that overlaps with the calculated date_debut and date_fin
-    overlapping_sessions = SessionRequest.objects.filter(session_choice=session_choice, 
-                                                         date_debut__lt=date_fin, 
-                                                         date_fin__gt=date_debut)
+        date_debut_time = datetime.combine(date_debut, morning_start_time)
+        date_fin = datetime.combine(date_debut, morning_end_time)
 
-    # If there's an overlapping session, schedule for the next day and recurse
-    if overlapping_sessions.exists():
-        return get_schedule(session_choice)
+    # If session_choice is 'Après midi' and current time is past the session start, schedule for the next day
+    else:
+        if now.date() == date_debut and now.time() >= afternoon_start_time:
+            date_debut += timedelta(days=1)  # schedule for the next day
+        
+        date_debut_time = datetime.combine(date_debut, afternoon_start_time)
+        date_fin = datetime.combine(date_debut, afternoon_end_time)
     
-    return date_debut, date_fin
+    return date_debut_time, date_fin
 
 def index(request):
 
