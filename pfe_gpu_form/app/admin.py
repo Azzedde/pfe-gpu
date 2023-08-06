@@ -6,12 +6,12 @@ from django.contrib import admin
 from .models import SessionRequest, Etudiant
 from .tasks import start_user_session
 
-admin.site.register(SessionRequest)
+
 admin.site.register(Etudiant)
 
 from django.contrib import admin
 from celery.result import AsyncResult
-from celery.app.control import revoke
+from celery.worker.control import revoke 
 
 class SessionRequestAdmin(admin.ModelAdmin):
     
@@ -21,7 +21,7 @@ class SessionRequestAdmin(admin.ModelAdmin):
         # If date_debut or date_fin is changed and a task id exists, then revoke the task
         if 'date_debut' in form.changed_data or 'date_fin' in form.changed_data:
             if obj.celery_task_id:
-                revoke(obj.celery_task_id, terminate=True)  # Revoke the old task
+                revoke(task_id=obj.celery_task_id, terminate=True, state='REVOKED')  # Revoke the old task
 
                 # Schedule a new task with the updated dates
                 scheduled_start = obj.date_debut

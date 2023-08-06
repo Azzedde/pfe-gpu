@@ -24,13 +24,17 @@ def get_schedule(session_choice):
     afternoon_start = timedelta(hours=14, minutes=30)
     afternoon_end = timedelta(hours=23, minutes=59)
 
-    # Get the last session for the chosen type
-    latest_session = SessionRequest.objects.filter(session_choice=session_choice).order_by('-date_debut').first()
 
+
+    # Get the last session for the chosen type
+    latest_session = SessionRequest.objects.filter(session_choice=session_choice,status='En attente').order_by('-date_debut').first()
+
+    
     # Calculate the next available date_debut and date_fin based on the latest session
-    date_debut = datetime.now(tz=tz).replace(hour=0, minute=0, second=0, microsecond=0)
-    if latest_session and latest_session.date_fin.date() >= date_debut.date():
-        date_debut = latest_session.date_fin + timedelta(days=1)
+    now = datetime.now(tz=tz)
+    date_debut = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    if latest_session and latest_session.date_fin > now:
+        date_debut += timedelta(days=1)
 
     if session_choice == 'Matinale':
         date_debut += morning_start
@@ -110,6 +114,7 @@ def session_request(request):
         send_email_task.apply_async(args=[email, subject, body], eta=scheduled_time)
 
         scheduled_start = session_request.date_debut
+        print(session_request.id)
         result = start_user_session.apply_async(args=[etudiant.id, session_request.id], eta=scheduled_start)
         session_request.celery_task_id = result.id
         session_request.save()
