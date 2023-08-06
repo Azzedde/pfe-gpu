@@ -24,26 +24,39 @@ def get_schedule(session_choice):
     afternoon_start = timedelta(hours=14, minutes=30)
     afternoon_end = timedelta(hours=23, minutes=59)
 
-    # Get the last session for the chosen type
-    latest_session = SessionRequest.objects.filter(session_choice=session_choice).order_by('-date_debut').first()
+    # Current date and time
+    now = datetime.now()
 
-    # Calculate the next available date_debut based on the latest session
-    now = datetime.now(tz=tz)
+    # Start with the assumption that the session will begin today
     date_debut = now.replace(hour=0, minute=0, second=0, microsecond=0)
 
-    # Check if we have a latest session
-    if latest_session:
-        # If the last session ends in the future, then next session starts the day after the last session ends
-        if latest_session.date_fin.date() >= date_debut.date():
-            date_debut = latest_session.date_fin.date() + timedelta(days=1)
-
+    # Check if the session_choice is 'Matinale'
     if session_choice == 'Matinale':
+        # Check if the current time is already past the start time
+        if now.time() >= morning_start:
+            date_debut += timedelta(days=1)  # schedule for the next day
+        
         date_debut += morning_start
         date_fin = date_debut + morning_end - morning_start
+
+    # Otherwise, it's 'Après midi'
     else:
+        # Check if the current time is already past the start time
+        if now.time() >= afternoon_start:
+            date_debut += timedelta(days=1)  # schedule for the next day
+        
         date_debut += afternoon_start
         date_fin = date_debut + afternoon_end - afternoon_start
+    
+    # Get any session that overlaps with the calculated date_debut and date_fin
+    overlapping_sessions = SessionRequest.objects.filter(session_choice=session_choice, 
+                                                         date_debut__lt=date_fin, 
+                                                         date_fin__gt=date_debut)
 
+    # If there's an overlapping session, schedule for the next day and recurse
+    if overlapping_sessions.exists():
+        return get_schedule(session_choice)
+    
     return date_debut, date_fin
 
 def index(request):
