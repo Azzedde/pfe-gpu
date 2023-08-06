@@ -3,7 +3,6 @@ from django.shortcuts import render, HttpResponse
 
 from django.shortcuts import render, redirect
 from .models import SessionRequest, Etudiant
-from .user_management import *
 import random
 import string
 import os
@@ -12,6 +11,35 @@ import threading
 
 from django.conf import settings
 from django.core.mail import send_mail
+from .tasks import send_email_task, start_user_session, create_user_task
+
+from datetime import datetime, timedelta
+import pytz
+
+tz = pytz.timezone('Africa/Algiers')
+def get_schedule(session_choice):
+    # Define the session timings
+    morning_start = timedelta(hours=7)
+    morning_end = timedelta(hours=14)
+    afternoon_start = timedelta(hours=14, minutes=30)
+    afternoon_end = timedelta(hours=23, minutes=59)
+
+    # Get the last session for the chosen type
+    latest_session = SessionRequest.objects.filter(session_choice=session_choice).order_by('-date_debut').first()
+
+    # Calculate the next available date_debut and date_fin based on the latest session
+    date_debut = datetime.now(tz=tz).replace(hour=0, minute=0, second=0, microsecond=0)
+    if latest_session and latest_session.date_fin.date() >= date_debut.date():
+        date_debut = latest_session.date_fin + timedelta(days=1)
+
+    if session_choice == 'Matinale':
+        date_debut += morning_start
+        date_fin = date_debut + morning_end - morning_start
+    else:
+        date_debut += afternoon_start
+        date_fin = date_debut + afternoon_end - afternoon_start
+
+    return date_debut, date_fin
 
 def index(request):
 
@@ -19,6 +47,9 @@ def index(request):
 
 
 def session_request(request):
+    # get number of sessions en attente
+    nb_sessions_en_attente = SessionRequest.objects.filter(status='En attente').count()
+    # get the form data to create a session and an etudiant
     if request.method == 'POST':
         nom = request.POST['nom']
         prenom = request.POST['prenom']
@@ -42,19 +73,20 @@ def session_request(request):
                 #check if etudiant existed already in the database
         if Etudiant.objects.filter(email=email).exists():
             etudiant = Etudiant.objects.get(email=email)
-            return redirect('erreur',{'message':'Vous avez déjà fait une demande auparavant ! Veuillez revenir à la page d\'accueil et cliquer sur "Redemander une session"'})
+            return redirect('erreur')
         etudiant.save()
+        # create a user in the ubuntu system
         password = ''.join(random.choices(string.ascii_letters + string.digits, k=10))
-        create_user(etudiant.email,password)
+        create_user_task.delay(etudiant.email, password)
+        print('compte crée !')
 
-        print('etudiant crée !')
-
+        # send an email to the student to confirm that his demand is being processed
         subject = "Demande de session en cours de traitement"
-        body = f"Bonjour {nom} {prenom},\n\nNous avons bien reçu votre demande de session GPU. Votre demande est actuellement en cours de traitement. Nous vous informerons dès que votre session sera prête.\n\nCordialement,\nService Réseaux ESI"
-        send_email(email, subject, body)
+        body = f"Bonjour {nom} {prenom},\n\nNous avons bien reçu votre demande de session GPU.\n\nNous vous informons qu\'en ce moment il y a {nb_sessions_en_attente} demandes en attente.\n\nNous vous enverrons un email dès que votre session sera disponible.\n\nCordialement,\n\nService Réseaux ESI"
+        send_email_task.delay(email, subject, body)
+
+        # create a session request
         session_choice = request.POST['session_choice']
-                # Generate a random secure password
-        
         date_debut, date_fin = get_schedule(session_choice)
         session_request = SessionRequest(
             etudiant=etudiant,
@@ -68,13 +100,18 @@ def session_request(request):
         print('session created !')
         subject = "Informations de connexion à votre session GPU"
         body = f"Bonjour {nom} {prenom},\n\nNous vous informons que votre session GPU sera disponible à partir du {date_debut} jusqu'au {date_fin}.\n\nVoici les informations de connexion à votre session :\n\nAdresse IP de la machine: 10.0.0.24\nNom d'utilisateur : {email}\nMot de passe : {password}\n\nCordialement,\nService Réseaux ESI"
-        send_email(email, subject, body)
-        print(datetime.now())
-
+        send_email_task.delay(email, subject, body)
         
-        # send an email in a thread to the student before 30 min of the date_debut of the session
-        thread = threading.Thread(target=send_email_delayed, args=(email, subject, body,timedelta(minutes=30),date_debut)).start()
-        thread = threading.Thread(target=start_session, args=(etudiant.id, session_request.id )).start()
+
+        # Calculate the time to run the task: 30 minutes before date_debut
+        scheduled_time = date_debut - timedelta(minutes=30)
+
+        # Use Celery's 'apply_async' with the 'eta' option to schedule the task
+        send_email_task.apply_async(args=[email, subject, body], eta=scheduled_time)
+
+        scheduled_start = session_request.date_debut
+        result = start_user_session.apply_async(args=[etudiant.id, session_request.id], eta=scheduled_start)
+        session_request.celery_task_id = result.id
         session_request.save()
         print('session processed !')
 
@@ -101,11 +138,17 @@ def session_redemand(request):
 
         subject = "Informations de connexion à votre session GPU"
         body = f"Bonjour {etudiant.nom} {etudiant.prenom},\n\nNous vous informons que votre session GPU sera disponible à partir du {date_debut} jusqu'au {date_fin}.\n\nVoici les informations de connexion à votre session :\n\nAdresse IP de la machine: 10.0.0.24 \nNom d'utilisateur : {email}\nMot de passe : {etudiant.password}\n\nCordialement,\nService Réseaux ESI"
-        send_email(email, subject, body)
+        send_email_task.delay(email, subject, body)
         # send an email in a thread to the student before 30 min of the date_debut of the session
-        thread = threading.Thread(target=send_email_delayed, args=(email, subject, body,timedelta(minutes=30),date_debut)).start()
+        scheduled_time = date_debut - timedelta(minutes=30)
+        send_email_task.apply_async(args=[email, subject, body], eta=scheduled_time)
+        
 
-        thread = threading.Thread(target=start_session, args=(etudiant.id, session_request.id ))
+        # Schedule the start of the session
+        scheduled_start = session_request.date_debut
+        result = start_user_session.apply_async(args=[etudiant.id, session_request.id], eta=scheduled_start)
+        session_request.celery_task_id = result.id
+        session_request.save()
         print('session processed  !')
         # Redirect to a success page after saving the data
         return redirect('success_session_request', id=session_request.id)
@@ -121,3 +164,9 @@ def success_session_request(request,id):
 def erreur(request):
     return render(request, 'app/erreur.html')
 
+
+def view_all_requests(request):
+    session_requests = SessionRequest.objects.all()
+
+
+    return render(request, 'app/view_all_requests.html', {'session_requests': session_requests})

@@ -101,20 +101,11 @@ h2 {
         <div class="wrapper wrapper--w790">
             <div class="card card-5">
                 <div class="card-heading">
-                    <h2 class="title">Attention: Erreur</h2>
+                    <h2 class="title">Toutes les Sessions</h2>
                 </div>
                 <div class="card-body">
 
-                    
-                    <div class="alert alert-danger" role="alert">
-                    Vous avez déjà fait une demande auparavant ! Veuillez revenir à la page d'accueil et cliquer sur "Redemander une session"
-
-                    </div>
-
-                    
-                    <div class="btn-group">
-                        <a class="btn btn--radius-2 btn--blue" href="{% url 'index' %}">Retour</a>
-                    </div>
+                    <div id="timeline" style="height: 500px;"></div>
 
                 </div>
 
@@ -125,6 +116,29 @@ h2 {
         </div>
     </div>
 
+    <script type="text/javascript">
+        google.charts.load('current', {'packages':['timeline']});
+        google.charts.setOnLoadCallback(drawChart);
+
+        function drawChart() {
+            var container = document.getElementById('timeline');
+            var chart = new google.visualization.Timeline(container);
+            var dataTable = new google.visualization.DataTable();
+
+            dataTable.addColumn({ type: 'string', id: 'Etudiant' });
+            
+            dataTable.addColumn({ type: 'date', id: 'Start' });
+            dataTable.addColumn({ type: 'date', id: 'End' });
+            dataTable.addRows([
+                {% for session in session_requests %}
+                ['{{session.etudiant.email}}',  new Date("{{session.date_debut|date:"D, d M Y H:i:s"}}"), new Date("{{session.date_fin|date:"D, d M Y H:i:s"}}")],
+                {% endfor %}
+            ]);
+
+            chart.draw(dataTable);
+        }
+    </script>
+    
 
     <!-- Jquery JS-->
     <script src="{% static 'vendor/jquery/jquery.min.js' %}"></script>
