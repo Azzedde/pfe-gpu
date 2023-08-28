@@ -18,8 +18,8 @@ def create_user_task(username, password):
 
 @shared_task
 def send_email_task(username, subject, body):
-    from_email = "reseau@esi.dz"
-    password = "D@t@ C3nt3r@1969"
+    from_email = "email"
+    password = "password"
 
     msg = MIMEMultipart()
     msg["From"] = from_email
