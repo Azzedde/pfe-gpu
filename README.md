@@ -12,10 +12,12 @@ Features
 
 Prerequisites
 
-    Python 3.x
-    Django
-    Redis Server
-    Celery
+    Django==4.2.3
+    watchdog
+    pytz
+    celery[redis]
+    django-celery-beat
+    django-celery-results
 
 Installation
 
