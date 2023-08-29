@@ -1,13 +1,17 @@
-## Django-Celery-Redis Ticketing System
+## Django-Celery-Redis Dynamic Session Ticketing System
 
-This project leverages the power of Django, Celery, and Redis to manage user sessions on a high-performance machine. Users can acquire tickets (comprising a username and password) and the system adeptly handles session management tasks such as initiation, locking, and termination.
+This project leverages the power of Django, Celery, and Redis to manage user sessions on a high-performance ubuntu machine. Users can acquire tickets (comprising a username and password) from a webpage and the system adeptly handles session management tasks such as initiation, locking, and termination. This system was originally implemented for my School's Network Department to facilitate for them the management of students that benefits from the provided machine. 
 
 Homepage and form for ticket access:
+![Homepage View](pictures/homepage.png)
+![Form View](pictures/form.png)
 
 Features
 
-- User Ticketing: Acquire access to a high-performance machine through a ticket system.
+- Creates automatically a user with a secured generated password (username=provided email) in the ubuntu system and locks its password until the scheduled session starts.
 - Session Management: Start, lock, and end sessions with seamless orchestration using Celery.
+- Django Admin can manually change the Session start datetime and length for each user.
+- Autmatic email sending to the student using SMTP protocol
 - High Concurrency: Built for performance with the robust capabilities of Celery and Redis.
 
 Prerequisites
@@ -23,11 +27,11 @@ Installation
 
     Clone the repository:
 
-    git clone <repository_link>
+    git clone https://github.com/Azzedde/pfe-gpu/
 
 Navigate to the project directory and install the requirements:
 
-    cd project_directory
+    cd pfe-gpu
     pip install -r requirements.txt
 
 Run migrations:
